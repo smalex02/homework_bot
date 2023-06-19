@@ -35,7 +35,7 @@ logger.addHandler(logging.StreamHandler())
 
 
 def check_tokens():
-    """Проверка доступности переменных окружения"""
+    """Проверка доступности переменных окружения."""
     if PRACTICUM_TOKEN is None:
         logging.critical('Нет переменной PRACTICUM TOKEN')
         raise Exception('Нет переменной PRACTICUM TOKEN')
@@ -48,14 +48,14 @@ def check_tokens():
 
 
 def send_message(bot, message):
-    """Отправка сообщений в Telegram чат"""
+    """Отправка сообщений в Telegram чат."""
     logging.debug('Сообщение отправлено')
     message = bot.send_message(TELEGRAM_CHAT_ID, message,)
     return message
 
 
 def get_api_answer(timestamp):
-    """Запрос к API"""
+    """Запрос к API."""
     try:
         payload = {'from_date': timestamp}
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
