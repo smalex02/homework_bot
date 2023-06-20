@@ -2,9 +2,7 @@ import logging
 import os
 
 import time
-
 import requests
-
 import telegram
 
 from dotenv import load_dotenv
@@ -26,31 +24,20 @@ HOMEWORK_VERDICTS = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
-
 
 def check_tokens():
     """Проверка доступности переменных окружения."""
-    if PRACTICUM_TOKEN is None:
-        logging.critical('Нет переменной PRACTICUM TOKEN')
-        raise Exception('Нет переменной PRACTICUM TOKEN')
-    if TELEGRAM_TOKEN is None:
-        logging.critical('Нет переменной TELEGRAM_TOKEN')
-        raise Exception('Нет переменной TELEGRAM_TOKEN')
-    if TELEGRAM_CHAT_ID is None:
-        logging.critical('Нет переменной TELEGRAM_CHAT_ID')
-        raise Exception('Нет переменной TELEGRAM_CHAT_ID')
+    tokens = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
+    return all(tokens)
 
 
 def send_message(bot, message):
     """Отправка сообщений в Telegram чат."""
-    logging.debug('Сообщение отправлено')
-    message = bot.send_message(TELEGRAM_CHAT_ID, message,)
+    try:
+        message = bot.send_message(TELEGRAM_CHAT_ID, message,)
+        logging.debug('Сообщение отправлено')
+    except Exception:
+        logging.exception('Ошибка при отправке сообщения')
     return message
 
 
@@ -74,7 +61,7 @@ def check_response(response):
         response = response['homeworks']
     except KeyError:
         logging.error('Ошибка доступа к ключу')
-    if type(response) != list:
+    if not isinstance(response, list):
         raise TypeError('Данные не в виде списка')
     return response
 
@@ -87,12 +74,12 @@ def parse_status(homework):
         logging.error('Ошибка доступа к ключу homework_name')
 
     try:
-        homework_status = homework['status']
+        hw_status = homework['status']
     except KeyError:
         logging.error('Ошибка доступа к ключу status')
 
     try:
-        hw_verdict = HOMEWORK_VERDICTS[homework_status]
+        hw_verdict = HOMEWORK_VERDICTS[hw_status]
     except KeyError:
         logging.error('Неизвестный вердикт')
     return f'Изменился статус проверки работы "{hw_name}". {hw_verdict}'
@@ -100,11 +87,14 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-    check_tokens()
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = int(time.time())
+    if check_tokens():
+        bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    else:
+        logging.critical('Отсутствуют данные')
+        raise ValueError('Отсутствуют данные')
     while True:
         try:
+            timestamp = int(time.time())
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
             if len(homeworks) > 0:
@@ -120,4 +110,9 @@ def main():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.addHandler(logging.StreamHandler())
     main()
